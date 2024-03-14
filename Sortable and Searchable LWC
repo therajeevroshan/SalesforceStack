@@ -1,0 +1,121 @@
+HTML - 
+
+<template>
+    <lightning-card title="Table" icon-name="standard:account">
+        <div class="slds-m-around_medium">
+            <lightning-input type="search" label="Search" onchange={handleSearch}></lightning-input>
+            <lightning-datatable key-field="id" data={data} columns={columns} sorted-by={sortedBy}
+                sorted-direction={sortedDirection} onsort={handleSort} hide-checkbox-column>
+            </lightning-datatable>
+        </div>
+    </lightning-card>
+</template>
+
+
+JS - 
+
+import { LightningElement, wire } from 'lwc';
+import fetchData from '@salesforce/apex/DataTableController.fetchData';
+
+export default class TestTableComp extends LightningElement {
+    data = [];
+    originalData = [];
+    columns = [
+        { label: 'Name', fieldName: 'name', type: 'text', sortable: true },
+        { label: 'Email', fieldName: 'email', type: 'email', sortable: true }
+        // Add more columns as needed
+    ];
+    sortedBy;
+    sortedDirection = 'asc';
+
+    @wire(fetchData)
+    wiredData({ error, data }) {
+        if (data) {
+            this.originalData = data;
+            this.sortData();
+        } else if (error) {
+            console.error(error);
+        }
+    }
+
+    sortData() {
+        const fieldName = this.sortedBy;
+        const sortDirection = this.sortedDirection === 'asc' ? 1 : -1;
+        // Clone the data to avoid directly modifying the state
+        let sortedData = [...this.originalData];
+        // Sort the data
+        sortedData.sort((a, b) => {
+            let value1 = a[fieldName] || '';
+            let value2 = b[fieldName] || '';
+            return sortDirection * value1.localeCompare(value2);
+        });
+        // Update the data with sorted results
+        this.data = sortedData;
+    }
+
+    handleSort(event) {
+        const { fieldName, sortDirection } = event.detail;
+        this.sortedBy = fieldName;
+        this.sortedDirection = sortDirection;
+        this.sortData();
+    }
+
+    handleSearch(event) {
+        const searchTerm = event.target.value.toLowerCase();
+        this.data = this.originalData.filter(row => 
+            Object.values(row).some(value => 
+                String(value).toLowerCase().includes(searchTerm)
+            )
+        );
+    }
+}
+
+
+META XML- 
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>59.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__RecordPage</target>
+        <target>lightningCommunity__Page</target>
+        <target>lightningCommunity__Default</target>
+        <target>lightning__Tab</target>
+    </targets>
+</LightningComponentBundle>
+
+
+Apex - 
+
+public with sharing class DataTableController {
+    @AuraEnabled(cacheable=true)
+    public static List<CustomWrapper> fetchData() {
+        List<CustomWrapper> data = new List<CustomWrapper>();
+        data.add(new CustomWrapper('John Doe', 'john@example.com'));
+        data.add(new CustomWrapper('Jane Smith', 'jane@example.com'));
+        data.add(new CustomWrapper('Mike Johnson', 'mike@example.com'));
+        data.add(new CustomWrapper('Ilkin Doe', 'ikdoe@example.com'));
+        data.add(new CustomWrapper('Rajani Smith', 'rajanismith@example.com'));
+        data.add(new CustomWrapper('Alice Johnson', 'alice@example.com'));
+        data.add(new CustomWrapper('Bob Smith', 'bob@example.com'));
+        data.add(new CustomWrapper('Emily Doe', 'emily@example.com'));
+        data.add(new CustomWrapper('Samantha Brown', 'samantha@example.com'));
+        data.add(new CustomWrapper('David Lee', 'david@example.com'));
+        return data;
+    }
+
+    public class CustomWrapper {
+        @AuraEnabled
+        public String name { get; set; }
+        @AuraEnabled
+        public String email { get; set; }
+        
+        public CustomWrapper(String name, String email) {
+            this.name = name;
+            this.email = email;
+        }
+    }
+    
+}
